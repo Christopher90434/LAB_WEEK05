@@ -1,20 +1,58 @@
 package com.example.labweek05
 
 import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
+import android.util.Log
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import com.example.labweek05.api.CatApiService
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.scalars.ScalarsConverterFactory
 
 class MainActivity : AppCompatActivity() {
+
+    private val retrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://api.thecatapi.com/v1/")
+            .addConverterFactory(ScalarsConverterFactory.create())
+            .build()
+    }
+
+    private val catApiService by lazy {
+        retrofit.create(CatApiService::class.java)
+    }
+
+    private lateinit var apiResponseView: TextView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+
+        apiResponseView = findViewById(R.id.api_response)
+        getCatImageResponse()
+    }
+
+    private fun getCatImageResponse() {
+        val call = catApiService.searchImages(1, "full")
+        call.enqueue(object : Callback<String> {
+            override fun onFailure(call: Call<String>, t: Throwable) {
+                Log.e(MAIN_ACTIVITY, "Failed to get response", t)
+                apiResponseView.text = "Error: ${t.message}"
+            }
+
+            override fun onResponse(call: Call<String>, response: Response<String>) {
+                if (response.isSuccessful) {
+                    apiResponseView.text = response.body()
+                } else {
+                    apiResponseView.text = "API Error: ${response.code()}"
+                }
+            }
+        })
+    }
+
+    companion object {
+        const val MAIN_ACTIVITY = "MAIN_ACTIVITY"
     }
 }
